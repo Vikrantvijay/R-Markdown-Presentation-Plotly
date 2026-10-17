@@ -1,0 +1,116 @@
+---
+title: "Robotics in Motion: Three Paths, One Mission"
+subtitle: "An interactive Plotly flight-path lab"
+author: "Interactive Robotics Lab"
+date: "October 17, 2026"
+output:
+  ioslides_presentation:
+    widescreen: true
+    smaller: false
+    css: styles.css
+    self_contained: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+library(plotly)
+```
+
+## ROBOTICS IN MOTION
+
+### Three paths. One mission.
+
+**Created October 17, 2026**  
+An interactive Plotly presentation about simulated drone navigation.
+
+The routes are illustrative simulations, not observations of real drone flights.
+
+## THE MISSION
+
+A drone travels from launch `(0, 0, 1.2)` to destination `(10, 0, 1.2)`.
+
+- **Direct:** shortest route, but crosses the restricted obstacle.
+- **Ground detour:** swings laterally around the obstacle.
+- **Vertical bypass:** climbs above the obstacle and descends.
+
+The obstacle is modeled as a cylinder centered at `(5, 0)` with radius **1.15 km** and height **2.8 km**. All coordinates are illustrative kilometers.
+
+## EXPLORE THE FLIGHT PATHS
+
+Drag to rotate the 3D scene, scroll to zoom, and hover over any route.
+
+```{r plotly-3d, fig.height=5.0, fig.width=10}
+t <- seq(0, 1, length.out = 151)
+paths <- list(
+  "Direct" = data.frame(x = 10*t, y = 0*t, z = 0*t + 1.2),
+  "Ground detour" = data.frame(x = 10*t, y = 2.1*sin(pi*t), z = 0*t + 1.2),
+  "Vertical bypass" = data.frame(x = 10*t, y = 0*t, z = 1.2 + 2.9*sin(pi*t))
+)
+colors <- c("Direct"="#fb7185", "Ground detour"="#2dd4bf", "Vertical bypass"="#c4b5fd")
+angle <- seq(0, 2*pi, length.out = 80)
+obstacle_x <- rbind(5 + 1.15*cos(angle), 5 + 1.15*cos(angle))
+obstacle_y <- rbind(1.15*sin(angle), 1.15*sin(angle))
+obstacle_z <- rbind(rep(0, 80), rep(2.8, 80))
+p <- plot_ly()
+p <- add_surface(p, x=obstacle_x, y=obstacle_y, z=obstacle_z,
+                 opacity=0.42, showscale=FALSE, name="Restricted zone",
+                 colorscale=list(c(0,"#fb7185"), c(1,"#fb7185")),
+                 hoverinfo="skip", showlegend=FALSE)
+for (n in names(paths)) {
+  d <- paths[[n]]
+  p <- add_trace(p, x=d$x, y=d$y, z=d$z, type="scatter3d", mode="lines",
+                 name=n, line=list(color=colors[[n]], width=8),
+                 hovertemplate=paste0("<b>", n, "</b><br>X: %{x:.2f} km<br>Y: %{y:.2f} km<br>Z: %{z:.2f} km<extra></extra>"))
+}
+p <- add_trace(p, x=c(0,10), y=c(0,0), z=c(1.2,1.2), type="scatter3d",
+               mode="markers+text", text=c("Launch","Destination"),
+               textposition="top center", marker=list(size=6,color=c("#ffffff","#fde68a")),
+               name="Endpoints", showlegend=FALSE)
+p <- layout(p, scene=list(
+  xaxis=list(title="X: distance (km)",range=c(-0.6,10.6)),
+  yaxis=list(title="Y: offset (km)",range=c(-2.2,3)),
+  zaxis=list(title="Z: altitude (km)",range=c(0,5.2)),
+  aspectratio=list(x=1.7,y=0.9,z=0.72)),
+  margin=list(l=0,r=0,b=0,t=25),
+  legend=list(orientation="h",x=0.1,y=1.07))
+p
+```
+
+## HOW FAR DOES EACH ROUTE TRAVEL?
+
+Route lengths are calculated by summing 150 small 3D straight-line segments per path.
+
+```{r plotly-distance, fig.height=4.4, fig.width=10}
+path_length <- function(d) {
+  dx <- diff(d$x); dy <- diff(d$y); dz <- diff(d$z)
+  sum(sqrt(dx^2 + dy^2 + dz^2))
+}
+distances <- vapply(paths, path_length, numeric(1))
+plot_ly(x=unname(distances), y=names(distances), type="bar", orientation="h",
+        marker=list(color=unname(colors[names(distances)])),
+        text=paste0(round(distances, 2), " km"),textposition="outside",
+        hovertemplate="%{y}: %{x:.2f} km<extra></extra>") %>%
+  layout(xaxis=list(title="Modeled route length (km)",range=c(0,14)),
+         yaxis=list(title="",categoryorder="array",categoryarray=rev(names(distances))),
+         margin=list(l=125,r=60,t=20,b=45))
+```
+
+The shortest distance is not always a feasible flight path: the direct route intersects the obstacle.
+
+## WHAT DOES THE MODEL TEACH US?
+
+- **Safety first.** A geometrically short route can be blocked.
+- **Plan in three dimensions.** Lateral and vertical maneuvers offer different trade-offs.
+- **Optimization needs constraints.** Real autonomous navigation also considers speed, energy, weather, regulations, and separation margins.
+
+**This is a simplified geometry exercise, not a real-world flight-planning or safety model.**
+
+## THANK YOU
+
+### Curiosity deserves an interactive canvas.
+
+**Created:** October 17, 2026  
+**Built with:** R Markdown and Plotly  
+**Project:** Robotics in Motion
+
+For the grading rubric, this deck includes a recent creation date and interactive Plotly visualizations.
